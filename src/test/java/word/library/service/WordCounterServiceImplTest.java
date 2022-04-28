@@ -1,40 +1,41 @@
-package word.counter.service;
+package word.library.service;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import word.counter.exception.IllegalCharacterException;
-import word.external.translator.service.TranslatorService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import word.library.exception.IllegalCharacterException;
+import word.library.translator.TranslatorService;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
+
+
 @ExtendWith(MockitoExtension.class)
+@SpringBootTest
 public class WordCounterServiceImplTest {
 
     @Mock
     private TranslatorService translateService;
 
+    @Autowired
     @InjectMocks
     private WordCounterServiceImpl wordCounterServiceImpl;
 
     @BeforeEach
     public void clear(){
-        wordCounterServiceImpl.getWordCounter().getAlphabetsOnlyWordList().clear();
+        wordCounterServiceImpl.getWordCounterMap().clear();
     }
 
-
     @Test
-    public void shouldThrowIllegalcharacterExceptionwhenThereIsNonAlphabeticCharacterInTheWord() throws IllegalCharacterException{
+    public void shouldThrowIllegalcharacterExceptionwhenThereIsNonAlphabeticCharacterInTheWord() throws IllegalCharacterException {
         assertThrows(IllegalCharacterException.class,  () -> {
             wordCounterServiceImpl.addWords("jasdhja>@##$%^&*");
         });
@@ -42,25 +43,36 @@ public class WordCounterServiceImplTest {
         assertThrows(IllegalCharacterException.class,  () -> {
             wordCounterServiceImpl.addWords(null);
         });
+
+        assertThrows(IllegalCharacterException.class,  () -> {
+            wordCounterServiceImpl.addWords("jasdhja12345");
+        });
     }
 
     @Test
-    public void shouldInsertWordInWordCounterListSuccessfully() throws IllegalCharacterException {
+    public void shouldInsertWordInWordCounterMapSuccessfully() throws IllegalCharacterException {
+        when(translateService.translateToEnglish("flower")).thenReturn("flower");
+        when(translateService.translateToEnglish("flor")).thenReturn("FLOWER");
+        when(translateService.translateToEnglish("blum")).thenReturn("flower");
+        when(translateService.translateToEnglish("TREE")).thenReturn("TREE");
+        when(translateService.translateToEnglish("Rock")).thenReturn("Rock");
 
-        List<String> expectedWordList = new ArrayList<>(Arrays.asList("flower","TREE","flor","blum","Rock"));
-
-        wordCounterServiceImpl.addWords("flower");
+        wordCounterServiceImpl.addWords("flower"); // wil be returned as flower by translation service
         wordCounterServiceImpl.addWords("TREE");
-        wordCounterServiceImpl.addWords("flor");
-        wordCounterServiceImpl.addWords("blum");
+        wordCounterServiceImpl.addWords("flor");   // wil be returned as flower by translation service
+        wordCounterServiceImpl.addWords("blum");   // wil be returned as flower by translation service
         wordCounterServiceImpl.addWords("Rock");
 
-        assertEquals(expectedWordList,wordCounterServiceImpl.getWordCounter().getAlphabetsOnlyWordList());
+
+        assertEquals(Integer.valueOf(3),wordCounterServiceImpl.getWordCounterMap().get("FLOWER"));
+        assertEquals(Integer.valueOf(1),wordCounterServiceImpl.getWordCounterMap().get("TREE"));
+        assertEquals(Integer.valueOf(1),wordCounterServiceImpl.getWordCounterMap().get("ROCK"));
 
     }
 
     @Test
     public void shouldReturnWordCountSuccessfullyFromWordCounterList() throws IllegalCharacterException{
+        when(translateService.translateToEnglish("flower")).thenReturn("flower");
         when(translateService.translateToEnglish("flor")).thenReturn("FLOWER");
         when(translateService.translateToEnglish("blum")).thenReturn("flower");
         when(translateService.translateToEnglish("TREE")).thenReturn("tree");
@@ -92,7 +104,7 @@ public class WordCounterServiceImplTest {
     }
 
     @Test
-    public void shouldReturnWordCountSuccessfullyWhenWordNotPresentInWordCounterListButPresentIntranslatorService() throws IllegalCharacterException{
+    public void shouldReturnWordCountSuccessfullyWhenOnlyNonEnglishWordAreAdded() throws IllegalCharacterException{
 
         when(translateService.translateToEnglish("olla")).thenReturn("hello");
         when(translateService.translateToEnglish("salut")).thenReturn("Hello");
@@ -105,5 +117,6 @@ public class WordCounterServiceImplTest {
         assertEquals(2,wordCounterServiceImpl.countSimilarMeaningWords("hello"));
 
     }
+
 
 }

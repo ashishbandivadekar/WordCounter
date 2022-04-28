@@ -1,7 +1,6 @@
-package word.counter.exception;
+package word.library.exception;
 
 public class IllegalCharacterException extends Exception{
-
     public IllegalCharacterException(String message) {
         super(message);
     }
